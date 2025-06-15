@@ -50,6 +50,7 @@ func (s *QRService) CreateBox(userID string, request *models.CreateBoxRequest) (
 		UserID:      userID,
 		Name:        request.Name,
 		Description: request.Description,
+		Room:        request.Room,
 		Items:       items,
 		QRCode:      qrCodeBase64,
 		QRCodeURL:   qrContent,
@@ -120,6 +121,10 @@ func (s *QRService) UpdateBox(userID string, boxID string, request *models.Updat
 
 	if request.Description != "" {
 		box.Description = request.Description
+	}
+
+	if request.Room != "" {
+		box.Room = request.Room
 	}
 
 	if request.Items != "" {

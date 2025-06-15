@@ -56,6 +56,15 @@ func (db *DB) InitSchema() error {
 			ALTER TABLE boxes ADD COLUMN description TEXT;
 		END IF;
 	END $$;
+
+	-- Add room column if it doesn't exist (for existing databases)
+	DO $$ 
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+					   WHERE table_name='boxes' AND column_name='room') THEN
+			ALTER TABLE boxes ADD COLUMN room TEXT;
+		END IF;
+	END $$;
 	`
 
 	_, err := db.Exec(query)

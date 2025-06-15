@@ -20,8 +20,8 @@ func NewBoxRepository(db *database.DB) *BoxRepository {
 
 func (r *BoxRepository) Create(box *models.Box) error {
 	query := `
-		INSERT INTO boxes (id, user_id, name, description, items, qr_code, qr_code_url, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO boxes (id, user_id, name, description, room, items, qr_code, qr_code_url, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	_, err := r.db.Exec(
@@ -30,6 +30,7 @@ func (r *BoxRepository) Create(box *models.Box) error {
 		box.UserID,
 		box.Name,
 		box.Description,
+		box.Room,
 		pq.Array(box.Items),
 		box.QRCode,
 		box.QRCodeURL,
@@ -46,7 +47,7 @@ func (r *BoxRepository) Create(box *models.Box) error {
 
 func (r *BoxRepository) GetByID(id string) (*models.Box, error) {
 	query := `
-		SELECT id, user_id, name, description, items, qr_code, qr_code_url, created_at, updated_at
+		SELECT id, user_id, name, description, room, items, qr_code, qr_code_url, created_at, updated_at
 		FROM boxes
 		WHERE id = $1
 	`
@@ -54,12 +55,14 @@ func (r *BoxRepository) GetByID(id string) (*models.Box, error) {
 	box := &models.Box{}
 	var items pq.StringArray
 	var description sql.NullString
+	var room sql.NullString
 
 	err := r.db.QueryRow(query, id).Scan(
 		&box.ID,
 		&box.UserID,
 		&box.Name,
 		&description,
+		&room,
 		&items,
 		&box.QRCode,
 		&box.QRCodeURL,
@@ -81,13 +84,20 @@ func (r *BoxRepository) GetByID(id string) (*models.Box, error) {
 		box.Description = ""
 	}
 
+	// Handle NULL room
+	if room.Valid {
+		box.Room = room.String
+	} else {
+		box.Room = ""
+	}
+
 	box.Items = []string(items)
 	return box, nil
 }
 
 func (r *BoxRepository) GetByUserID(userID string) ([]*models.Box, error) {
 	query := `
-		SELECT id, user_id, name, description, items, qr_code, qr_code_url, created_at, updated_at
+		SELECT id, user_id, name, description, room, items, qr_code, qr_code_url, created_at, updated_at
 		FROM boxes
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -105,12 +115,14 @@ func (r *BoxRepository) GetByUserID(userID string) ([]*models.Box, error) {
 		box := &models.Box{}
 		var items pq.StringArray
 		var description sql.NullString
+		var room sql.NullString
 
 		err := rows.Scan(
 			&box.ID,
 			&box.UserID,
 			&box.Name,
 			&description,
+			&room,
 			&items,
 			&box.QRCode,
 			&box.QRCodeURL,
@@ -129,6 +141,13 @@ func (r *BoxRepository) GetByUserID(userID string) ([]*models.Box, error) {
 			box.Description = ""
 		}
 
+		// Handle NULL room
+		if room.Valid {
+			box.Room = room.String
+		} else {
+			box.Room = ""
+		}
+
 		box.Items = []string(items)
 		boxes = append(boxes, box)
 	}
@@ -143,8 +162,8 @@ func (r *BoxRepository) GetByUserID(userID string) ([]*models.Box, error) {
 func (r *BoxRepository) Update(box *models.Box) error {
 	query := `
 		UPDATE boxes
-		SET name = $2, description = $3, items = $4, updated_at = $5
-		WHERE id = $1 AND user_id = $6
+		SET name = $2, description = $3, room = $4, items = $5, updated_at = $6
+		WHERE id = $1 AND user_id = $7
 	`
 
 	box.UpdatedAt = time.Now()
@@ -154,6 +173,7 @@ func (r *BoxRepository) Update(box *models.Box) error {
 		box.ID,
 		box.Name,
 		box.Description,
+		box.Room,
 		pq.Array(box.Items),
 		box.UpdatedAt,
 		box.UserID,

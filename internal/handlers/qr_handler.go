@@ -59,6 +59,11 @@ func (h *QRHandler) CreateBox(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(request.Room) > 100 {
+		utils.BadRequestError(w, "Room must be less than 100 characters")
+		return
+	}
+
 	if len(request.Items) > 1000 {
 		utils.BadRequestError(w, "Items list must be less than 1000 characters")
 		return
@@ -176,6 +181,11 @@ func (h *QRHandler) UpdateBox(w http.ResponseWriter, r *http.Request) {
 
 	if len(request.Description) > 500 {
 		utils.BadRequestError(w, "Description must be less than 500 characters")
+		return
+	}
+
+	if len(request.Room) > 100 {
+		utils.BadRequestError(w, "Room must be less than 100 characters")
 		return
 	}
 
@@ -347,6 +357,7 @@ func (h *QRHandler) GetPublicBoxDetails(w http.ResponseWriter, r *http.Request) 
 		"id":          box.ID,
 		"name":        box.Name,
 		"description": box.Description,
+		"room":        box.Room,
 		"items":       box.Items,
 		"createdAt":   box.CreatedAt,
 	}

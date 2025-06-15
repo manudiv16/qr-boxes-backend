@@ -10,6 +10,7 @@ type Box struct {
 	UserID      string    `json:"userId"`
 	Name        string    `json:"name"`
 	Description string    `json:"description,omitempty"`
+	Room        string    `json:"room,omitempty"`
 	Items       []string  `json:"items,omitempty"`
 	QRCode      string    `json:"qrCode"`
 	QRCodeURL   string    `json:"qrCodeUrl"`
@@ -21,6 +22,7 @@ type Box struct {
 type CreateBoxRequest struct {
 	Name        string `json:"name" validate:"required,min=1,max=100"`
 	Description string `json:"description,omitempty" validate:"max=500"`
+	Room        string `json:"room,omitempty" validate:"max=100"`
 	Items       string `json:"items,omitempty" validate:"max=1000"`
 }
 
@@ -35,5 +37,6 @@ type CreateBoxResponse struct {
 type UpdateBoxRequest struct {
 	Name        string `json:"name,omitempty" validate:"max=100"`
 	Description string `json:"description,omitempty" validate:"max=500"`
+	Room        string `json:"room,omitempty" validate:"max=100"`
 	Items       string `json:"items,omitempty" validate:"max=1000"`
 }
