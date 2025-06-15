@@ -40,6 +40,7 @@ func (rt *Router) SetupRoutes() http.Handler {
 	mux.HandleFunc("/api/boxes/qr", middleware.AuthMiddleware(rt.qrHandler.GetBoxQR))
 	mux.HandleFunc("/api/boxes/update", middleware.AuthMiddleware(rt.qrHandler.UpdateBox))
 	mux.HandleFunc("/api/boxes/add-item", middleware.AuthMiddleware(rt.qrHandler.AddItemToBox))
+	mux.HandleFunc("/api/boxes/remove-item", middleware.AuthMiddleware(rt.qrHandler.RemoveItemFromBox))
 	mux.HandleFunc("/api/boxes/delete", middleware.AuthMiddleware(rt.qrHandler.DeleteBox))
 	mux.HandleFunc("/api/boxes/stats", middleware.AuthMiddleware(rt.qrHandler.GetUserStats))
 

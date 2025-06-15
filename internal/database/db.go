@@ -37,6 +37,7 @@ func (db *DB) InitSchema() error {
 		id UUID PRIMARY KEY,
 		user_id VARCHAR(255) NOT NULL,
 		name VARCHAR(255) NOT NULL,
+		description TEXT,
 		items TEXT[],
 		qr_code TEXT NOT NULL,
 		qr_code_url TEXT NOT NULL,
@@ -46,6 +47,15 @@ func (db *DB) InitSchema() error {
 
 	CREATE INDEX IF NOT EXISTS idx_boxes_user_id ON boxes(user_id);
 	CREATE INDEX IF NOT EXISTS idx_boxes_created_at ON boxes(created_at);
+	
+	-- Add description column if it doesn't exist (for existing databases)
+	DO $$ 
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+					   WHERE table_name='boxes' AND column_name='description') THEN
+			ALTER TABLE boxes ADD COLUMN description TEXT;
+		END IF;
+	END $$;
 	`
 
 	_, err := db.Exec(query)

@@ -13,8 +13,8 @@ import (
 )
 
 type QRService struct {
-	baseURL    string
-	boxRepo    *repository.BoxRepository
+	baseURL string
+	boxRepo *repository.BoxRepository
 }
 
 func NewQRService(baseURL string, boxRepo *repository.BoxRepository) *QRService {
@@ -46,14 +46,15 @@ func (s *QRService) CreateBox(userID string, request *models.CreateBoxRequest) (
 	// Create the box object
 	now := time.Now()
 	box := &models.Box{
-		ID:        boxID,
-		UserID:    userID,
-		Name:      request.Name,
-		Items:     items,
-		QRCode:    qrCodeBase64,
-		QRCodeURL: qrContent,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:          boxID,
+		UserID:      userID,
+		Name:        request.Name,
+		Description: request.Description,
+		Items:       items,
+		QRCode:      qrCodeBase64,
+		QRCodeURL:   qrContent,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
 	// Generate SVG version for web display
@@ -117,6 +118,10 @@ func (s *QRService) UpdateBox(userID string, boxID string, request *models.Updat
 		box.Name = request.Name
 	}
 
+	if request.Description != "" {
+		box.Description = request.Description
+	}
+
 	if request.Items != "" {
 		box.Items = processItemsList(request.Items)
 	}
@@ -162,6 +167,48 @@ func (s *QRService) AddItemToBox(userID string, boxID string, item string) (*mod
 	return box, nil
 }
 
+// RemoveItemFromBox removes a single item from an existing box
+func (s *QRService) RemoveItemFromBox(userID string, boxID string, itemToRemove string) (*models.Box, error) {
+	// Get existing box to verify ownership
+	box, err := s.boxRepo.GetByID(boxID)
+	if err != nil {
+		return nil, fmt.Errorf("box not found")
+	}
+
+	if box.UserID != userID {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	// Find and remove the item
+	itemToRemove = strings.TrimSpace(itemToRemove)
+	found := false
+	newItems := make([]string, 0)
+
+	for _, item := range box.Items {
+		if strings.TrimSpace(item) == itemToRemove && !found {
+			// Skip the first occurrence of the item
+			found = true
+			continue
+		}
+		newItems = append(newItems, item)
+	}
+
+	if !found {
+		return nil, fmt.Errorf("item not found")
+	}
+
+	// Update the box with the new items list
+	box.Items = newItems
+
+	// Save updated box
+	err = s.boxRepo.Update(box)
+	if err != nil {
+		return nil, err
+	}
+
+	return box, nil
+}
+
 // processItemsList converts a multi-line string into a cleaned list of items
 func processItemsList(itemsText string) []string {
 	if strings.TrimSpace(itemsText) == "" {
@@ -174,7 +221,7 @@ func processItemsList(itemsText string) []string {
 	for _, line := range lines {
 		// Clean each line
 		cleaned := strings.TrimSpace(line)
-		
+
 		// Only add non-empty items (no need to remove prefixes since items come from frontend array)
 		if cleaned != "" {
 			items = append(items, cleaned)

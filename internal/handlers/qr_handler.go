@@ -54,6 +54,11 @@ func (h *QRHandler) CreateBox(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(request.Description) > 500 {
+		utils.BadRequestError(w, "Description must be less than 500 characters")
+		return
+	}
+
 	if len(request.Items) > 1000 {
 		utils.BadRequestError(w, "Items list must be less than 1000 characters")
 		return
@@ -166,6 +171,11 @@ func (h *QRHandler) UpdateBox(w http.ResponseWriter, r *http.Request) {
 	// Validate request
 	if request.Name != "" && len(request.Name) > 100 {
 		utils.BadRequestError(w, "Box name must be less than 100 characters")
+		return
+	}
+
+	if len(request.Description) > 500 {
+		utils.BadRequestError(w, "Description must be less than 500 characters")
 		return
 	}
 
@@ -334,10 +344,11 @@ func (h *QRHandler) GetPublicBoxDetails(w http.ResponseWriter, r *http.Request) 
 
 	// Create a public response without sensitive data
 	publicBox := map[string]interface{}{
-		"id":        box.ID,
-		"name":      box.Name,
-		"items":     box.Items,
-		"createdAt": box.CreatedAt,
+		"id":          box.ID,
+		"name":        box.Name,
+		"description": box.Description,
+		"items":       box.Items,
+		"createdAt":   box.CreatedAt,
 	}
 
 	log.Printf("QRHandler.GetPublicBoxDetails: Successfully fetched public box details for %s", boxID)
@@ -402,5 +413,63 @@ func (h *QRHandler) AddItemToBox(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("QRHandler.AddItemToBox: Successfully added item to box %s for user %s", request.BoxID, userID)
+	utils.SuccessResponse(w, box)
+}
+
+// RemoveItemFromBox removes a single item from an existing box
+func (h *QRHandler) RemoveItemFromBox(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		utils.BadRequestError(w, "Method not allowed")
+		return
+	}
+
+	// Get user ID from the authenticated context
+	userID, err := middleware.GetUserID(r.Context())
+	if err != nil {
+		log.Printf("QRHandler.RemoveItemFromBox: Failed to get user ID: %v", err)
+		utils.UnauthorizedError(w, "Invalid authentication")
+		return
+	}
+
+	// Parse request body
+	var request struct {
+		BoxID string `json:"boxId" validate:"required"`
+		Item  string `json:"item" validate:"required"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		log.Printf("QRHandler.RemoveItemFromBox: Failed to decode request: %v", err)
+		utils.BadRequestError(w, "Invalid request body")
+		return
+	}
+
+	// Validate request
+	if request.BoxID == "" {
+		utils.BadRequestError(w, "Box ID is required")
+		return
+	}
+
+	if request.Item == "" {
+		utils.BadRequestError(w, "Item is required")
+		return
+	}
+
+	log.Printf("QRHandler.RemoveItemFromBox: Removing item from box %s for user %s", request.BoxID, userID)
+
+	// Remove item from box
+	box, err := h.qrService.RemoveItemFromBox(userID, request.BoxID, request.Item)
+	if err != nil {
+		log.Printf("QRHandler.RemoveItemFromBox: Failed to remove item: %v", err)
+		if err.Error() == "unauthorized" || err.Error() == "box not found" {
+			utils.UnauthorizedError(w, "Box not found or unauthorized")
+		} else if err.Error() == "item not found" {
+			utils.BadRequestError(w, "Item not found in box")
+		} else {
+			utils.InternalServerError(w, "Failed to remove item from box")
+		}
+		return
+	}
+
+	log.Printf("QRHandler.RemoveItemFromBox: Successfully removed item from box %s for user %s", request.BoxID, userID)
 	utils.SuccessResponse(w, box)
 }
